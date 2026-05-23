@@ -1,0 +1,61 @@
+- dialog "Ваши избори у погледу приватности" [ref=e3]:
+  - generic [ref=e5]:
+    - heading [level=1] [ref=e7]:
+      - banner [ref=e8]:
+        - generic [ref=e11]:
+          - generic [ref=e12]:
+            - heading "guce" [level=1] [ref=e13]
+            - link "yahoo" [ref=e14] [cursor=pointer]:
+              - /url: https://www.yahoo.com/
+              - img [ref=e15]
+              - text: guce
+          - toolbar
+    - generic [ref=e16]:
+      - generic [ref=e17]:
+        - generic [ref=e18]:
+          - paragraph [ref=e19]: Ваша приватност нам је важна
+          - paragraph [ref=e20]:
+            - text: Yahoo део је
+            - button "Yahoo породица брендова" [ref=e21]: Yahoo породице брендова
+            - text: .
+          - generic [ref=e22]:
+            - text: Кад користите наше локације и апликације, користимо
+            - button "Колачићи" [ref=e23]: колачиће
+            - text: ":"
+          - list [ref=e24]:
+            - listitem [ref=e25]: да бисмо вам пружали своје локације и апликације
+            - listitem [ref=e26]: да бисмо потврђивали идентитет корисника, примењивали мере безбедности и спречавали нежељену пошту и злоупотребу и
+            - listitem [ref=e27]:
+              - button "Мерење" [ref=e28]: мерење
+              - text: ваше употребе наших сајтова и апликација
+        - generic [ref=e29]:
+          - generic [ref=e30]: Ваши избори у погледу приватности
+          - generic [ref=e31]:
+            - text: Ако кликнете на „
+            - strong [ref=e32]: Прихвати све
+            - text: “, ми и
+            - link "наши партнери" [ref=e33] [cursor=pointer]:
+              - /url: /v2/partners-list?sessionId=3_cc-session_05f19c97-265a-40e5-b867-23e980728c66
+            - text: ", укључујући 247 који су део Оквира за транспарентност и сагласност IAB-а, такође ћемо складиштити информације на уређају и/или приступати им (другим речима, користићемо колачиће) и користићемо податке о прецизној географској локацији и друге податке о личности, као што су"
+            - button "Технички идентификатори" [ref=e34]: технички идентификатори
+            - text: и подаци о прегледању и претраживању, за аналитику, персонализовано оглашавање и садржај, мерење оглашавања и садржаја, као и за истраживање публике и развој услуга.
+          - paragraph [ref=e35]:
+            - text: Ако не желите да ми и наши партнери користимо колачиће и личне податке у ове додатне сврхе, кликните на „
+            - strong [ref=e36]: Одбиј све
+            - text: “.
+          - paragraph [ref=e37]:
+            - text: Ако желите да прилагодите своје изборе, кликните на „
+            - strong [ref=e38]: Управљај подешавањима приватности
+            - text: “.
+          - paragraph [ref=e39]:
+            - text: Пристанак можете повући или променити изборе у било ком тренутку тако што ћете кликнути на везе „Поставке приватности и колачића“ или „Контролна табла приватности“ на нашим сајтовима и у нашим апликацијама. Сазнајте више о томе како користимо ваше податке о личности у нашим
+            - link "Смерницама за приватност" [ref=e40] [cursor=pointer]:
+              - /url: /redirect?to=https%3A%2F%2Flegal.yahoo.com%2Fie%2Fsr-cyrl%2Fyahoo%2Fprivacy%2Findex.html&brandDomain=&brandId=yahoo&tos=eu&step=&sessionId=3_cc-session_05f19c97-265a-40e5-b867-23e980728c66&userType=NON_REG
+            - text: и
+            - link "Смерницама о колачићима" [ref=e41] [cursor=pointer]:
+              - /url: /redirect?to=https%3A%2F%2Flegal.yahoo.com%2Fie%2Fsr-cyrl%2Fyahoo%2Fprivacy%2Fcookies%2Findex.html&brandDomain=&brandId=yahoo&tos=eu&step=&sessionId=3_cc-session_05f19c97-265a-40e5-b867-23e980728c66&userType=NON_REG
+            - text: .
+      - generic [ref=e42]:
+        - button "Прихвати све" [ref=e43] [cursor=pointer]
+        - button "Одбиј све" [ref=e44] [cursor=pointer]
+        - button "Управљај подешавањима приватности" [ref=e45] [cursor=pointer]

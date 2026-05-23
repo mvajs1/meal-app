@@ -1,0 +1,100 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            Int            @id @default(autoincrement())
+  email         String         @unique
+  passwordHash  String
+  name          String
+  calorieTarget Int            @default(2000)
+  goal          String         @default("maintain") // "lose", "maintain", "gain"
+  unitSystem    String         @default("metric")  // "metric" or "imperial"
+  locale        String         @default("en-US")
+  createdAt     DateTime       @default(now())
+  foods         Food[]         @relation("UserFoods")
+  foodLogs      FoodLog[]
+  allergies     UserAllergen[]
+}
+
+model Allergen {
+  id    Int            @id @default(autoincrement())
+  name  String         @unique // "gluten", "dairy", "nuts", "soy", "eggs", "shellfish", "fish", ...
+  users UserAllergen[]
+  foods FoodAllergen[]
+}
+
+model UserAllergen {
+  userId     Int
+  allergenId Int
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  allergen   Allergen @relation(fields: [allergenId], references: [id], onDelete: Cascade)
+
+  @@id([userId, allergenId])
+  @@index([allergenId])
+}
+
+model Ingredient {
+  id    Int              @id @default(autoincrement())
+  name  String           @unique
+  foods FoodIngredient[]
+}
+
+model Food {
+  id          Int              @id @default(autoincrement())
+  name        String           @unique
+  calories    Float // per 100g
+  protein     Float // grams per 100g
+  carbs       Float // grams per 100g
+  fat         Float // grams per 100g
+  sugar       Float            @default(0)
+  fiber       Float            @default(0)
+  category    String           @default("other") // "protein","grain","vegetable","fruit","dairy","snack","beverage","processed","other"
+  isSystem    Boolean          @default(true)
+  createdBy   User?            @relation("UserFoods", fields: [createdById], references: [id])
+  createdById Int?
+  ingredients FoodIngredient[]
+  allergens   FoodAllergen[]
+  foodLogs    FoodLog[]
+}
+
+model FoodAllergen {
+  foodId     Int
+  allergenId Int
+  food       Food     @relation(fields: [foodId], references: [id], onDelete: Cascade)
+  allergen   Allergen @relation(fields: [allergenId], references: [id], onDelete: Cascade)
+
+  @@id([foodId, allergenId])
+  @@index([allergenId])
+}
+
+model FoodIngredient {
+  foodId       Int
+  ingredientId Int
+  // Position preserves the original ordering from the recipe (first listed = most by weight).
+  position     Int
+  food         Food       @relation(fields: [foodId], references: [id], onDelete: Cascade)
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@id([foodId, ingredientId])
+  @@index([ingredientId])
+}
+
+model FoodLog {
+  id        Int      @id @default(autoincrement())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    Int
+  food      Food     @relation(fields: [foodId], references: [id])
+  foodId    Int
+  grams     Float
+  mealType  String // "breakfast", "lunch", "dinner", "snack"
+  date      DateTime // date-only: normalized to UTC midnight
+  createdAt DateTime @default(now())
+
+  @@index([userId, date])
+}
