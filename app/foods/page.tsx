@@ -1,7 +1,9 @@
 'use client';
 
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useState } from 'react';
 import Navbar from '@/app/components/Navbar';
+import AppAlert from '@/app/components/AppAlert';
+import ConfirmDialog from '@/app/components/ConfirmDialog';
 
 interface Food {
   id: number;
@@ -45,19 +47,23 @@ export default function FoodsPage() {
   const [form, setForm] = useState(emptyForm);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [error, setError] = useState('');
+  const [pageAlert, setPageAlert] = useState('');
+  const [deleteFoodId, setDeleteFoodId] = useState<number | null>(null);
+
+  const loadFoods = useCallback(async () => {
+    const res = await fetch('/api/foods');
+    const data = await res.json();
+    setFoods(Array.isArray(data) ? data : []);
+  }, []);
 
   useEffect(() => {
-    loadFoods();
+    fetch('/api/foods')
+      .then((r) => r.json())
+      .then((data) => setFoods(Array.isArray(data) ? data : []));
     fetch('/api/auth/me')
       .then((r) => r.json())
       .then((data) => setCurrentUserId(data?.user?.id ?? data?.id ?? null));
   }, []);
-
-  async function loadFoods() {
-    const res = await fetch('/api/foods');
-    const data = await res.json();
-    setFoods(Array.isArray(data) ? data : []);
-  }
 
   function canEdit(food: Food) {
     return !food.isSystem && food.createdById === currentUserId;
@@ -128,13 +134,13 @@ export default function FoodsPage() {
   }
 
   async function handleDelete(id: number) {
-    if (!confirm('Delete this food?')) return;
+    setDeleteFoodId(null);
     const res = await fetch(`/api/foods/${id}`, { method: 'DELETE' });
     if (res.ok) {
       loadFoods();
     } else {
       const data = await res.json();
-      alert(data.error || 'Delete failed');
+      setPageAlert(data.error || 'Delete failed');
     }
   }
 
@@ -148,6 +154,8 @@ export default function FoodsPage() {
     <div className="min-h-screen bg-slate-50 pb-20" data-testid="foods-page">
       <Navbar />
       <main className="max-w-2xl mx-auto px-4 py-4 space-y-4">
+        <AppAlert message={pageAlert} onDismiss={() => setPageAlert('')} />
+
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-bold text-slate-800" data-testid="foods-title">Food Database</h1>
           <button
@@ -388,7 +396,7 @@ export default function FoodsPage() {
                                 Edit
                               </button>
                               <button
-                                onClick={(e) => { e.stopPropagation(); handleDelete(food.id); }}
+                                onClick={(e) => { e.stopPropagation(); setDeleteFoodId(food.id); }}
                                 className="text-red-500 hover:text-red-700 text-xs"
                               >
                                 Delete
@@ -450,6 +458,16 @@ export default function FoodsPage() {
           </div>
         </div>
       </main>
+      <ConfirmDialog
+        open={deleteFoodId !== null}
+        title="Delete food?"
+        message="This food will be removed from your database."
+        confirmLabel="Delete"
+        onCancel={() => setDeleteFoodId(null)}
+        onConfirm={() => {
+          if (deleteFoodId !== null) handleDelete(deleteFoodId);
+        }}
+      />
     </div>
   );
 }

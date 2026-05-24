@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Navbar from '@/app/components/Navbar';
 import MacroChart from '@/app/components/MacroChart';
+import ConfirmDialog from '@/app/components/ConfirmDialog';
 import Link from 'next/link';
 
 interface FoodLogEntry {
@@ -56,6 +57,7 @@ export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null);
   const [summary, setSummary] = useState<DaySummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [confirmClearOpen, setConfirmClearOpen] = useState(false);
 
   const today = new Date().toISOString().split('T')[0];
   const date = searchParams.get('date') || today;
@@ -83,7 +85,7 @@ export default function DashboardPage() {
   }
 
   async function handleClearToday() {
-    if (!confirm('Clear all food logs for this day?')) return;
+    setConfirmClearOpen(false);
     const res = await fetch(`/api/food-log?date=${date}`, { method: 'DELETE' });
     if (res.ok) {
       const updated = await fetch(`/api/food-log?date=${date}`).then((r) => r.json());
@@ -127,7 +129,7 @@ export default function DashboardPage() {
           <div className="flex items-center gap-3">
             {logs.length > 0 && (
               <button
-                onClick={handleClearToday}
+                onClick={() => setConfirmClearOpen(true)}
                 className="text-xs text-red-400 hover:text-red-600 font-medium"
                 data-testid="clear-today-btn"
               >
@@ -264,6 +266,14 @@ export default function DashboardPage() {
           );
         })}
       </main>
+      <ConfirmDialog
+        open={confirmClearOpen}
+        title="Clear food logs?"
+        message="This will remove every food logged for this day."
+        confirmLabel="Clear logs"
+        onCancel={() => setConfirmClearOpen(false)}
+        onConfirm={handleClearToday}
+      />
     </div>
   );
 }
