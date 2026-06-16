@@ -7,12 +7,12 @@
     "build": "next build",
     "start": "next start --port 3737",
     "lint": "eslint",
+    "test:test": "vitest run --config vitest.config.ts",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "npx tsx prisma/seed.ts",
     "db:reset": "rm -f prisma/dev.db && prisma db push && npx tsx prisma/seed.ts",
-    "create-user": "npx tsx scripts/createUser.ts",
     "clean": "rm -rf node_modules .next prisma/dev.db prisma/dev.db-journal",
     "setup": "npm install && npx prisma generate && npx prisma db push && npx tsx prisma/seed.ts"
   },
