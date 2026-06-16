@@ -18,7 +18,7 @@
     "analyze:security": "mkdir -p reports && semgrep scan --config auto --json > reports/semgrep.json || true",
     "analyze:lint": "mkdir -p reports && eslint . --format json --output-file reports/eslint.json || true",
     "analyze:dependencies": "mkdir -p reports && npm audit --json > reports/npmaudit.json || true",
-    "analyze:static": "npm run analyze:code && npm run analyze:lint && npm run analyze:dependencies"
+    "analyze:static": "npm run analyze:security && npm run analyze:lint && npm run analyze:dependencies"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
