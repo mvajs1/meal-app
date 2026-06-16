@@ -1,0 +1,36 @@
+rules:
+  - id: javascript.express.security.audit.detect-non-literal-regexp
+    message: RegExp constructed from non-literal input can enable regular expression denial of service.
+    severity: WARNING
+    languages:
+      - typescript
+      - javascript
+    patterns:
+      - pattern: new RegExp($INPUT, ...)
+      - pattern-not: new RegExp("...", ...)
+
+  - id: typescript.react.security.audit.react-dangerouslysetinnerhtml
+    message: Using dangerouslySetInnerHTML can expose users to cross-site scripting if the HTML is not sanitized.
+    severity: WARNING
+    languages:
+      - typescript
+    pattern: |
+      <$ELEMENT dangerouslySetInnerHTML={...} />
+
+  - id: typescript.nextjs.security.audit.nextresponse-redirect-user-input
+    message: Redirecting to user-controlled input can create an open redirect.
+    severity: WARNING
+    languages:
+      - typescript
+    patterns:
+      - pattern: NextResponse.redirect($URL, ...)
+      - pattern-not: NextResponse.redirect("...", ...)
+
+  - id: typescript.security.audit.prisma-raw-query
+    message: Raw Prisma queries can introduce SQL injection when interpolating user-controlled values.
+    severity: ERROR
+    languages:
+      - typescript
+    pattern-either:
+      - pattern: $DB.$queryRawUnsafe(...)
+      - pattern: $DB.$executeRawUnsafe(...)
