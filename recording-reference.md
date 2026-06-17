@@ -38,7 +38,7 @@ Presenter note:
 
 - Do not prebuild the stress runner for the recording.
 - The demo should show AI helping create the stress-data idea and the capacity-discovery script live.
-- If you want a reliable visible degradation point, ask AI during the demo how to increase data volume or lower the p95 threshold without making the scenario unrealistic.
+- If you want a reliable visible degradation point, ask AI during the demo how to increase data volume or lower the p97.5 threshold without making the scenario unrealistic.
 - Optional prepared helper: `scripts/seedStressHistory.ts` creates a larger set of food-log records for Alice so the history endpoint has more work to do. It is data setup only, not the stress-test runner.
 
 Why this endpoint:
@@ -53,7 +53,7 @@ Testing goal:
 
 - Do not assume a fixed load like "20 users for 30 seconds."
 - Start with low concurrency and increase gradually.
-- Stop when the endpoint shows degradation: high p95 latency, high error rate, or unstable throughput.
+- Stop when the endpoint shows degradation: high p97.5 latency, high error rate, or unstable throughput.
 - Use a safety cap so the demo cannot run forever; the cap is not the target load.
 - Use AI to generate the runner, interpret the curve, and recommend the next investigation.
 
@@ -61,7 +61,7 @@ Important demo note:
 
 - You do not have to literally crash the app.
 - For a strong laptop, the app may handle the demo load easily, or the load generator may become the bottleneck first.
-- Define "breaking point" as the first point where the service violates a chosen quality target, such as p95 latency over 300ms, error rate over 1%, or throughput flattening while latency rises.
+- Define "breaking point" as the first point where the service violates a chosen quality target, such as p97.5 latency over 300ms, error rate over 1%, or throughput flattening while latency rises.
 - If the app does not degrade naturally, use a controlled demo setup: larger test data, a lower resource limit, or a smaller safety threshold.
 
 Relevant files to show:
@@ -148,7 +148,7 @@ Bullets:
 - Set a quality threshold
 - Authenticate before running requests
 - Increase concurrency until the endpoint degrades
-- Capture p50, p95, p99, throughput, and error rate at each step
+- Capture p50, p97.5, p99, throughput, and error rate at each step
 - Interpret results with AI assistance
 
 Speaker note:
@@ -173,28 +173,46 @@ Point out:
 Prompt to AI:
 
 ```text
-You are a performance tester writing automated stress-test script using autocannon for: 
-GET /api/food-log/history?from=X&to=Y.
+ROLE
+You are a senior performance/QA engineer working inside an existing Next.js 16 + Prisma
+(SQLite) meal-tracking app. Write idiomatic code that matches the repo's conventions.
 
-App runs at http://localhost:3737.
-Login first with POST /api/auth/login using alice@carvedrock.com / password123.
-Capture and reuse the session cookie.
+CONTEXT
+- Target endpoint to load-test: GET /api/food-log/history?from=X&to=Y (dates are YYYY-MM-DD).
+  The app runs at http://localhost:3737.
+- Auth: POST /api/auth/login with { email, password } sets an httpOnly `session_token` cookie;
+  the endpoint returns 401 without it.
+- Test user: alice@carvedrock.com / password123.
+- Analysis artifacts are written to reports/;
+- Use autocannon for load generation.
 
-Do not use one fixed concurrency level.
-Start with low concurrency, then increase step by step until the endpoint degrades.
-Use a max concurrency as a safety cap only, not as the target.
-At each step, run a short measurement window and print:
-- concurrency
-- requests/sec
-- p50, p95, p99 latency
-- non-2xx/error rate
+TASK
+1) Seed script at scripts/seedLogHistoryPerformance.ts:
+   - clear alice's existing food logs first
+   - for each of the last 365 days, for each meal type (breakfast, lunch, dinner, snack),
+     insert exactly 3 food-log entries → 12 entries/day, 4,380 total for the year
+   - cycle through the existing seeded foods, with reasonable gram amounts
+   - print the resulting date range (from = 365 days ago, to = today)
 
-Stop when either:
-- p95 latency exceeds 300ms,
-- error rate exceeds 1%,
-- throughput stops increasing while latency keeps rising.
+2) Performance test at tests/performance/logHistory.performance.spec.ts using autocannon:
+   - log in, capture the session cookie, reuse it on every request
+   - preflight one request and assert 200 before ramping
+   - stepped concurrency: start low and step up (e.g. doubling); a max concurrency is only a
+     safety cap, never the target. Short measurement window per step.
+   - per step print: concurrency, requests/sec, p50, p97.5, p99 latency, non-2xx/error rate
+     (autocannon's result.latency exposes p50 / p97_5 / p99 directly)
+   - stop when ANY: p97.5 > 300ms, error rate > 1%, or throughput stops increasing while
+     latency keeps rising
+   - print the LAST HEALTHY and FIRST DEGRADED level (with the trip reason)
+   - make ramp, thresholds, window, and from/to range overridable via env vars (default the
+     range to the full seeded year)
 
-Also print the last healthy level and the first degraded level.
+3) Wire npm scripts: `db:seed:performance` (runs the seed) and `test:performance` (runs the test)
+
+EXPECTED OUTPUT
+- The two files above plus the package.json edits.
+- The test must ALSO persist its results to reports/logHistory-performance-test-result.json
+- End your reply with a short summary: files created/changed and the exact commands to run them.
 ```
 
 What to show:
@@ -207,8 +225,8 @@ What to show:
 Useful controls:
 
 ```bash
-STRESS_DAYS=30 STRESS_ENTRIES_PER_DAY=250 npx tsx scripts/seedStressHistory.ts
-STRESS_CLEAR_EXISTING=true npx tsx scripts/seedStressHistory.ts
+# AI also generates a hardcoded seed script, wired as an npm script:
+npm run db:seed:performance   # seeds Alice a full year of history (~4,380 rows)
 ```
 
 Note:
@@ -231,16 +249,36 @@ Say:
 
 > This review step matters. A fixed-load test can tell us whether the API survived one chosen scenario, but a stress test should help discover the point where the system starts to bend. Here I want to make sure the generated runner is actually exploring capacity.
 
-#### 9. Run Or Explain The Result, 60 Seconds
+#### 9. Run The Scripts And Interpret The Result, 90 Seconds
 
-Ask AI to run the script.
+The presenter runs the AI-generated scripts manually, then asks AI to interpret the saved
+report. Run these between building the scripts (step 7) and asking for the analysis:
+
+```bash
+# 0. One-time setup (only if not already done)
+npm install                       # ensure deps incl. autocannon are installed
+# ensure a .env exists with: DATABASE_URL="file:./dev.db"
+
+# 1. Start the app on :3737 — pick ONE (leave it running):
+npm run dev                       # quick, but dev-mode latency is inflated
+npm run build && npm start        # production build (recommended for the real demo)
+
+# 2. In a second terminal: seed Alice's full year of history (~4,380 rows)
+npm run db:seed:performance       # prints the from/to date range it created
+
+# 3. Run the stepped performance test
+npm run test:performance          # prints the ramp table AND writes the report
+
+# 4. Confirm the report landed
+ls -la reports/logHistory-performance-test-result.json
+```
 
 Show result fields:
 
 - `concurrency`
 - `requests/sec`
 - `p50`
-- `p95`
+- `p97.5`
 - `p99`
 - `error rate`
 - `last healthy level`
@@ -249,10 +287,35 @@ Show result fields:
 Prompt to AI:
 
 ```text
-Run the script.
-Interpret this capacity-discovery result like a QA performance report.
-Identify the last healthy concurrency level, the first degraded level,
-the main bottleneck signal, and what follow-up test you would run next.
+ROLE
+You are a performance engineer analyzing load-test results and advising on fixes.
+
+CONTEXT
+- Read the results from reports/logHistory-performance-test-result.json (don't ask me to paste).
+  It contains autocannon's per-step result objects plus a summary; read whatever fields are there.
+- The run load-tested GET /api/food-log/history?from=X&to=Y against alice@carvedrock.com, who
+  has a full year of history: 12 entries/day × 365 days = 4,380 FoodLog rows.
+- Handler behavior: it loads every FoodLog row in the range with its related Food, then groups
+  by day and computes macros in JS (no SQL aggregation, no pagination). Backed by SQLite via Prisma.
+- If the report records the run mode (dev/prod), use it; otherwise infer from the latency magnitude.
+
+TASK
+- Identify the last healthy level and the first degraded level, and which stop condition tripped.
+- Interpret the curve: where does throughput stop scaling, and how do p50/p97.5/p99 behave as
+  concurrency rises (queueing/saturation vs. a hard error wall)?
+- Diagnose the most likely bottleneck given the handler behavior above.
+- Recommend concrete, prioritized fixes (indexing, SQL aggregation, pagination, payload shaping,
+  caching) and state whether these numbers are trustworthy or if I should re-run against a
+  production build.
+
+EXPECTED OUTPUT
+Respond in simple language, in this structure:
+1. Verdict — one line: last healthy vs. first degraded (concurrency, req/s, p97.5) + trip reason.
+2. Ramp table — a compact table of the steps (conns, req/s, p50/p97.5/p99, err%).
+3. Curve interpretation — 2–4 sentences on the saturation behavior.
+4. Bottleneck diagnosis — ranked most→least likely, with the evidence from the data.
+5. Recommendations — prioritized list (P1/P2/P3), each with the expected impact.
+6. Trustworthiness — dev vs prod caveat and whether to re-run.
 ```
 
 Close-out line:
@@ -387,6 +450,7 @@ For each invariant, include:
 
 Do not rely on generic API testing advice.
 Base the analysis on the provided code.
+Explain in simple language.
 ```
 
 Say:
@@ -457,8 +521,8 @@ Assertions:
 Implementation:
 - Create the test at tests/fuzz/foods.fuzz.test.ts.
 - Install fast-check if it is not already installed.
-- Run the dev server and run the test.
-- After running, summarize the result as a QA finding.
+- Use the vitest.integration.config.ts and run the tests.
+- After running, show executed cases, what leaked, summarize the result in plain language as a QA finding.
 ```
 
 Possible commands AI may run:
@@ -570,7 +634,12 @@ Say:
 Example prompt for the AI agent:
 
 ```text
-Use Playwright with axe-core to run an automated accessibility check against http://localhost:3737/log.
+Use Playwright MCP and with axe-core to run an automated accessibility check against http://localhost:3737/log. The page may have different states so ensure you capture all of them. Use axe-core rules for WCAG 2.1 A and AA.
+
+Authentication:
+- Login with:
+  - email: alice@carvedrock.com
+  - password: password123
 
 Report:
 - axe violations found
