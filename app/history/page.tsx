@@ -21,6 +21,16 @@ interface DaySummary {
 export default function HistoryPage() {
   const [days, setDays] = useState<DaySummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [relativeDates] = useState(() => {
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+
+    return {
+      today: today.toISOString().split('T')[0],
+      yesterday: yesterday.toISOString().split('T')[0],
+    };
+  });
 
   useEffect(() => {
     const to = new Date().toISOString().split('T')[0];
@@ -46,11 +56,9 @@ export default function HistoryPage() {
 
   function formatDate(dateStr: string) {
     const d = new Date(dateStr + 'T12:00:00');
-    const today = new Date().toISOString().split('T')[0];
-    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
 
-    if (dateStr === today) return 'Today';
-    if (dateStr === yesterday) return 'Yesterday';
+    if (dateStr === relativeDates.today) return 'Today';
+    if (dateStr === relativeDates.yesterday) return 'Yesterday';
     return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
   }
 

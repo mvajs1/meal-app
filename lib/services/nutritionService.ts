@@ -1,4 +1,5 @@
 import prisma from '@/lib/db';
+import type { Prisma } from '@prisma/client';
 import {
   calculateMacros,
   checkBalanced,
@@ -100,34 +101,40 @@ export async function getFoodAuthFields(id: number) {
   });
 }
 
-async function upsertAllergensByName(names: string[]): Promise<number[]> {
+async function upsertAllergensByName(
+  client: Prisma.TransactionClient,
+  names: string[]
+): Promise<number[]> {
   if (names.length === 0) return [];
   const unique = [...new Set(names.map((n) => n.trim().toLowerCase()).filter(Boolean))];
   await Promise.all(
     unique.map((name) =>
-      prisma.allergen.upsert({
+      client.allergen.upsert({
         where: { name },
         create: { name },
         update: {},
       })
     )
   );
-  const rows = await prisma.allergen.findMany({ where: { name: { in: unique } } });
+  const rows = await client.allergen.findMany({ where: { name: { in: unique } } });
   return rows.map((r) => r.id);
 }
 
-async function upsertIngredientsByName(names: string[]): Promise<number[]> {
+async function upsertIngredientsByName(
+  client: Prisma.TransactionClient,
+  names: string[]
+): Promise<number[]> {
   if (names.length === 0) return [];
   await Promise.all(
     names.map((name) =>
-      prisma.ingredient.upsert({
+      client.ingredient.upsert({
         where: { name },
         create: { name },
         update: {},
       })
     )
   );
-  const rows = await prisma.ingredient.findMany({ where: { name: { in: names } } });
+  const rows = await client.ingredient.findMany({ where: { name: { in: names } } });
   // Preserve caller order (upsert input order == recipe order).
   const byName = new Map(rows.map((r) => [r.name, r.id]));
   return names.map((n) => byName.get(n)!).filter((v): v is number => v != null);
@@ -149,30 +156,32 @@ export interface CreateFoodInput {
 
 export async function createFood(data: CreateFoodInput): Promise<FoodDTO> {
   const ingredientNames = parseIngredients(data.ingredients);
-  const ingredientIds = await upsertIngredientsByName(ingredientNames);
-  const allergenIds = await upsertAllergensByName(data.allergens ?? []);
+  const created = await prisma.$transaction(async (tx) => {
+    const ingredientIds = await upsertIngredientsByName(tx, ingredientNames);
+    const allergenIds = await upsertAllergensByName(tx, data.allergens ?? []);
 
-  const created = await prisma.food.create({
-    data: {
-      name: data.name,
-      calories: data.calories,
-      protein: data.protein,
-      carbs: data.carbs,
-      fat: data.fat,
-      sugar: data.sugar ?? 0,
-      fiber: data.fiber ?? 0,
-      category: data.category ?? 'other',
-      isSystem: false,
-      createdById: data.createdById,
-      allergens: { create: allergenIds.map((allergenId) => ({ allergenId })) },
-      ingredients: {
-        create: ingredientIds.map((ingredientId, position) => ({
-          ingredientId,
-          position,
-        })),
+    return tx.food.create({
+      data: {
+        name: data.name,
+        calories: data.calories,
+        protein: data.protein,
+        carbs: data.carbs,
+        fat: data.fat,
+        sugar: data.sugar ?? 0,
+        fiber: data.fiber ?? 0,
+        category: data.category ?? 'other',
+        isSystem: false,
+        createdById: data.createdById,
+        allergens: { create: allergenIds.map((allergenId) => ({ allergenId })) },
+        ingredients: {
+          create: ingredientIds.map((ingredientId, position) => ({
+            ingredientId,
+            position,
+          })),
+        },
       },
-    },
-    include: foodInclude,
+      include: foodInclude,
+    });
   });
   return toDTO(created);
 }
@@ -207,7 +216,7 @@ export async function updateFood(id: number, data: UpdateFoodInput): Promise<Foo
     await tx.food.update({ where: { id }, data: scalarUpdates });
 
     if (data.allergens !== undefined) {
-      const allergenIds = await upsertAllergensByName(data.allergens);
+      const allergenIds = await upsertAllergensByName(tx, data.allergens);
       await tx.foodAllergen.deleteMany({ where: { foodId: id } });
       if (allergenIds.length > 0) {
         await tx.foodAllergen.createMany({
@@ -218,7 +227,7 @@ export async function updateFood(id: number, data: UpdateFoodInput): Promise<Foo
 
     if (data.ingredients !== undefined) {
       const names = parseIngredients(data.ingredients);
-      const ingredientIds = await upsertIngredientsByName(names);
+      const ingredientIds = await upsertIngredientsByName(tx, names);
       await tx.foodIngredient.deleteMany({ where: { foodId: id } });
       if (ingredientIds.length > 0) {
         await tx.foodIngredient.createMany({
