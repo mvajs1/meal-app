@@ -17,9 +17,9 @@
     "setup": "npm install && npx prisma generate && npx prisma db push && npx tsx prisma/seed.ts",
     "lint": "eslint .",
     "test:performance": "tsx tests/performance/logHistory.performance.spec.ts",
-    "analyze:security": "mkdir -p reports && SSL_CERT_FILE=/etc/ssl/cert.pem SEMGREP_LOG_FILE=reports/semgrep.log SEMGREP_SETTINGS_FILE=reports/semgrep-settings.yml SEMGREP_VERSION_CHECK_TIMEOUT=0 SEMGREP_VERSION_CACHE_PATH=reports/semgrep-version semgrep scan --config .semgrep.yml --json > reports/semgrep.json || true",
+    "analyze:security": "mkdir -p reports && semgrep scan --config auto --json > reports/semgrep.json || true",
     "analyze:lint": "mkdir -p reports && eslint . --format json --output-file reports/eslint.json || true",
-    "analyze:dependencies": "mkdir -p reports/npm-cache && npm_config_cache=reports/npm-cache npm audit --json > reports/npm-audit.json || true",
+    "analyze:dependencies": "mkdir -p reports && npm audit --json > reports/npm-audit.json || true",
     "analyze:static": "npm run analyze:security && npm run analyze:lint && npm run analyze:dependencies"
   },
   "dependencies": {
@@ -43,7 +43,7 @@
     "autocannon": "^8.0.0",
     "better-sqlite3": "^12.10.0",
     "eslint": "^9.39.4",
-    "eslint-config-next": "^16.2.4",
+    "eslint-config-next": "^16.2.9",
     "fast-check": "^4.8.0",
     "tailwindcss": "^4",
     "typescript": "^5",
