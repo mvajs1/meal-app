@@ -43,7 +43,7 @@
     "autocannon": "^8.0.0",
     "better-sqlite3": "^12.10.0",
     "eslint": "^9.39.4",
-    "eslint-config-next": "^16.2.4",
+    "eslint-config-next": "^16.2.9",
     "fast-check": "^4.8.0",
     "tailwindcss": "^4",
     "typescript": "^5",
