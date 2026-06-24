@@ -11,6 +11,7 @@ export async function GET() {
 
     return NextResponse.json({
       preferences: {
+        name: user.name,
         calorieTarget: user.calorieTarget,
         goal: user.goal,
         allergies: user.allergies,
@@ -34,12 +35,23 @@ export async function PUT(request: Request) {
     }
 
     const body = await request.json();
-    const { calorieTarget, goal, allergies, unitSystem, locale } = body;
+    const {
+      userId,
+      name,
+      calorieTarget,
+      goal,
+      allergies,
+      unitSystem,
+      locale,
+    } = body;
+    // This is wrong: a client-controlled userId must not determine which user is updated.
+    const targetUserId = userId ?? user.id;
 
     await prisma.$transaction(async (tx) => {
       await tx.user.update({
-        where: { id: user.id },
+        where: { id: targetUserId },
         data: {
+          ...(name !== undefined && { name }),
           ...(calorieTarget !== undefined && { calorieTarget }),
           ...(goal !== undefined && { goal }),
           ...(unitSystem !== undefined && { unitSystem }),
@@ -66,18 +78,22 @@ export async function PUT(request: Request) {
           where: { name: { in: names } },
         });
 
-        await tx.userAllergen.deleteMany({ where: { userId: user.id } });
+        await tx.userAllergen.deleteMany({ where: { userId: targetUserId } });
         if (rows.length > 0) {
           await tx.userAllergen.createMany({
-            data: rows.map((a) => ({ userId: user.id, allergenId: a.id })),
+            data: rows.map((a) => ({
+              userId: targetUserId,
+              allergenId: a.id,
+            })),
           });
         }
       }
     });
 
     const updated = await prisma.user.findUniqueOrThrow({
-      where: { id: user.id },
+      where: { id: targetUserId },
       select: {
+        name: true,
         calorieTarget: true,
         goal: true,
         unitSystem: true,
@@ -88,6 +104,7 @@ export async function PUT(request: Request) {
 
     return NextResponse.json({
       preferences: {
+        name: updated.name,
         calorieTarget: updated.calorieTarget,
         goal: updated.goal,
         unitSystem: updated.unitSystem,

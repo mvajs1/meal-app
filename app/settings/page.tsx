@@ -6,6 +6,7 @@ import Navbar from '@/app/components/Navbar';
 import AppAlert from '@/app/components/AppAlert';
 
 interface Preferences {
+  name: string;
   calorieTarget: number;
   allergies: string[];
 }
@@ -21,6 +22,7 @@ const ALLERGEN_OPTIONS = [
 ];
 
 const emptyPreferences: Preferences = {
+  name: '',
   calorieTarget: 2000,
   allergies: [],
 };
@@ -45,6 +47,7 @@ export default function SettingsPage() {
       .then((data) => {
         const loaded = data.preferences ?? emptyPreferences;
         setPreferences({
+          name: loaded.name ?? emptyPreferences.name,
           calorieTarget: loaded.calorieTarget ?? emptyPreferences.calorieTarget,
           allergies: Array.isArray(loaded.allergies) ? loaded.allergies : [],
         });
@@ -73,6 +76,13 @@ export default function SettingsPage() {
     setError('');
     setMessage('');
 
+    const name = preferences.name.trim();
+    if (!name) {
+      setError('Enter your name.');
+      setSaving(false);
+      return;
+    }
+
     const calorieTarget = Math.trunc(Number(preferences.calorieTarget));
     if (!Number.isInteger(calorieTarget) || calorieTarget <= 0) {
       setError('Enter a positive whole-number calorie goal.');
@@ -85,6 +95,7 @@ export default function SettingsPage() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          name,
           calorieTarget,
           allergies: preferences.allergies,
         }),
@@ -97,6 +108,7 @@ export default function SettingsPage() {
       }
 
       setPreferences({
+        name: data.preferences.name,
         calorieTarget: data.preferences.calorieTarget,
         allergies: data.preferences.allergies,
       });
@@ -117,7 +129,7 @@ export default function SettingsPage() {
             Settings
           </h1>
           <p className="text-sm text-slate-500">
-            Set the calorie goal and allergy profile used across your meals.
+            Manage your profile, calorie goal, and allergy preferences.
           </p>
         </div>
 
@@ -149,6 +161,38 @@ export default function SettingsPage() {
             className="space-y-4"
             data-testid="settings-form"
           >
+            <section className="bg-white rounded-xl border border-slate-200 p-5 space-y-3">
+              <div>
+                <label
+                  htmlFor="displayName"
+                  className="block text-sm font-semibold text-slate-800"
+                >
+                  Name
+                </label>
+                <p className="text-xs text-slate-400">
+                  This is how your name appears in Meal Tracker.
+                </p>
+              </div>
+              <input
+                id="displayName"
+                type="text"
+                required
+                maxLength={80}
+                autoComplete="name"
+                value={preferences.name}
+                onChange={(event) => {
+                  setMessage('');
+                  setError('');
+                  setPreferences({
+                    ...preferences,
+                    name: event.target.value,
+                  });
+                }}
+                data-testid="name-input"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
+              />
+            </section>
+
             <section className="bg-white rounded-xl border border-slate-200 p-5 space-y-3">
               <div>
                 <label

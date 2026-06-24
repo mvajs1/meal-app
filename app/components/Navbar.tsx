@@ -13,7 +13,7 @@ export default function Navbar() {
   useEffect(() => {
     fetch('/api/auth/me')
       .then((r) => (r.ok ? r.json() : null))
-      .then((data) => setUser(data))
+      .then((data) => setUser(data?.user ?? null))
       .catch(() => setUser(null));
   }, []);
 
@@ -48,7 +48,13 @@ export default function Navbar() {
             </span>
           </Link>
           <div className="flex items-center gap-3">
-            <span className="text-sm text-slate-500" data-testid="navbar-username">{user.name}</span>
+            <Link
+              href="/settings"
+              className="text-sm text-slate-500 hover:text-amber-600"
+              data-testid="navbar-username"
+            >
+              {user.name}
+            </Link>
             <button
               onClick={handleLogout}
               data-testid="logout-btn"
